@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#1a56db">
+<title>MyFinance</title>
+<style>
+  :root {
+    --bg: #f0f4f8;
+    --surface: #ffffff;
+    --surface2: #f7f9fc;
+    --border: #e2e8f0;
+    --primary: #1a56db;
+    --primary-light: #e8f0fe;
+    --danger: #e53e3e;
+    --danger-light: #fff5f5;
+    --success: #38a169;
+    --success-light: #f0fff4;
+    --warning: #d69e2e;
+    --warning-light: #fffff0;
+    --text: #1a202c;
+    --text2: #4a5568;
+    --text3: #718096;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; font-size: 17px; }
+  .app { max-width: 480px; margin: 0 auto; min-height: 100vh; background: var(--bg); position: relative; }
+
+  /* ===== PIN SCREEN ===== */
+  #pin-screen {
+    position: fixed; inset: 0; z-index: 1000;
+    background: linear-gradient(160deg, #1a56db 0%, #0e3da5 60%, #0a2d7a 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 30px 24px;
+  }
+  .pin-logo { font-size: 64px; margin-bottom: 12px; }
+  .pin-appname { color: #fff; font-size: 32px; font-weight: 700; margin-bottom: 6px; letter-spacing: 0.5px; }
+  .pin-tagline { color: rgba(255,255,255,0.65); font-size: 17px; margin-bottom: 40px; }
+  .pin-label { color: rgba(255,255,255,0.9); font-size: 19px; font-weight: 500; margin-bottom: 24px; text-align: center; }
+  .pin-dots { display: flex; gap: 20px; margin-bottom: 36px; }
+  .pin-dot { width: 24px; height: 24px; border-radius: 50%; border: 2.5px solid rgba(255,255,255,0.5); background: transparent; transition: background 0.15s, border-color 0.15s; }
+  .pin-dot.filled { background: #fff; border-color: #fff; }
+  .pin-dot.error { background: #fc8181; border-color: #fc8181; }
+  .pin-keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; width: 100%; max-width: 340px; }
+  .pin-key {
+    background: rgba(255,255,255,0.12); border: 1.5px solid rgba(255,255,255,0.2);
+    border-radius: 16px; color: #fff; font-size: 28px; font-weight: 600;
+    padding: 22px 10px; text-align: center; cursor: pointer;
+    transition: background 0.1s, transform 0.1s; user-select: none;
+    -webkit-user-select: none;
+  }
+  .pin-key:active { background: rgba(255,255,255,0.28); transform: scale(0.95); }
+  .pin-key.del { font-size: 24px; }
+  .pin-key.empty { background: transparent; border-color: transparent; cursor: default; }
+  .pin-error { color: #fc8181; font-size: 16px; margin-bottom: 10px; min-height: 22px; text-align: center; }
+  .pin-setup-note { color: rgba(255,255,255,0.6); font-size: 15px; margin-top: 24px; text-align: center; max-width: 290px; line-height: 1.6; }
+  .pin-change-link { color: rgba(255,255,255,0.75); font-size: 15px; margin-top: 14px; cursor: pointer; text-decoration: underline; }
+
+  /* ===== TOPBAR ===== */
+  .topbar { background: var(--primary); color: #fff; padding: 18px 18px 16px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(26,86,219,0.18); }
+  .topbar-title { font-size: 22px; font-weight: 700; flex: 1; }
+  .topbar-lock { background: rgba(255,255,255,0.15); border: none; color: #fff; border-radius: 10px; padding: 8px 16px; font-size: 16px; cursor: pointer; font-weight: 600; }
+
+  /* ===== NAV ===== */
+  .nav { display: flex; background: var(--surface); border-top: 1.5px solid var(--border); position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; z-index: 100; }
+  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 10px 4px 14px; cursor: pointer; border: none; background: none; color: var(--text3); font-size: 12px; gap: 5px; transition: color 0.15s; font-weight: 600; }
+  .nav-item.active { color: var(--primary); }
+  .nav-icon { font-size: 26px; line-height: 1; }
+
+  /* ===== CONTENT ===== */
+  .content { padding: 14px 16px 110px; }
+
+  /* ===== CARDS ===== */
+  .card { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); margin-bottom: 14px; overflow: hidden; }
+  .card-header { padding: 18px 18px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .card-title { font-weight: 700; font-size: 18px; }
+  .card-body { padding: 18px; }
+
+  /* ===== FORM ===== */
+  .form-group { margin-bottom: 18px; }
+  .form-label { font-size: 16px; color: var(--text2); margin-bottom: 8px; display: block; font-weight: 600; }
+  .form-input { width: 100%; padding: 14px 16px; border: 2px solid var(--border); border-radius: var(--radius-sm); font-size: 17px; background: var(--surface); color: var(--text); outline: none; transition: border 0.15s; }
+  .form-input:focus { border-color: var(--primary); }
+  select.form-input { cursor: pointer; }
+
+  /* ===== BUTTONS ===== */
+  .btn { padding: 15px 22px; border-radius: var(--radius-sm); border: none; font-size: 17px; font-weight: 700; cursor: pointer; transition: opacity 0.15s, transform 0.1s; display: inline-flex; align-items: center; gap: 8px; }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-success { background: var(--success); color: #fff; }
+  .btn-outline { background: transparent; border: 2px solid var(--border); color: var(--text2); }
+  .btn-sm { padding: 10px 16px; font-size: 15px; }
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+
+  /* ===== LIST ===== */
+  .list-item { display: flex; align-items: center; padding: 16px 18px; border-bottom: 1px solid var(--border); gap: 12px; }
+  .list-item:last-child { border-bottom: none; }
+  .list-item-info { flex: 1; }
+  .list-item-name { font-weight: 700; font-size: 17px; }
+  .list-item-sub { font-size: 14px; color: var(--text3); margin-top: 3px; }
+  .list-item-amount { font-weight: 700; font-size: 17px; }
+  .list-item-actions { display: flex; gap: 8px; }
+
+  /* ===== BALANCE ===== */
+  .bal-card { background: linear-gradient(135deg, #1a56db 0%, #0e3da5 100%); color: #fff; border-radius: var(--radius); padding: 24px; margin-bottom: 16px; }
+  .bal-label { font-size: 16px; opacity: 0.85; margin-bottom: 6px; }
+  .bal-amount { font-size: 32px; font-weight: 700; }
+  .bal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+  .bal-mini { background: var(--surface); border-radius: var(--radius-sm); padding: 14px; border: 1px solid var(--border); }
+  .bal-mini-label { font-size: 13px; color: var(--text3); margin-bottom: 5px; font-weight: 500; }
+  .bal-mini-val { font-size: 18px; font-weight: 700; }
+
+  /* ===== MISC ===== */
+  .quick-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+  .qa-btn { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 8px; text-align: center; cursor: pointer; }
+  .qa-icon { font-size: 30px; display: block; margin-bottom: 7px; }
+  .qa-label { font-size: 13px; color: var(--text2); font-weight: 700; }
+  .sec-title { font-size: 15px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; margin: 18px 0 10px; }
+  .empty { text-align: center; padding: 36px 20px; color: var(--text3); }
+  .empty-icon { font-size: 44px; margin-bottom: 10px; }
+  .empty-text { font-size: 17px; }
+  .transfer-types { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .tt-btn { padding: 16px 8px; border: 2px solid var(--border); border-radius: var(--radius-sm); text-align: center; cursor: pointer; font-size: 15px; font-weight: 700; color: var(--text2); background: var(--surface); transition: all 0.15s; }
+  .tt-btn.selected { border-color: var(--primary); background: var(--primary-light); color: var(--primary); }
+  .tt-icon { font-size: 26px; display: block; margin-bottom: 6px; }
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200; display: flex; align-items: flex-end; justify-content: center; }
+  .modal { background: var(--surface); border-radius: 24px 24px 0 0; padding: 24px 24px 40px; width: 100%; max-width: 480px; max-height: 88vh; overflow-y: auto; }
+  .modal-title { font-size: 20px; font-weight: 700; margin-bottom: 22px; }
+  .modal-close { float: right; background: var(--surface2); border: none; border-radius: 50%; width: 36px; height: 36px; font-size: 20px; cursor: pointer; color: var(--text2); }
+  .toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%); background: #1a202c; color: #fff; padding: 14px 26px; border-radius: 10px; font-size: 16px; font-weight: 600; z-index: 999; white-space: nowrap; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+  .amount-pos { color: var(--success); }
+  .amount-neg { color: var(--danger); }
+  input[type=date] { color-scheme: light; }
+</style>
+<link rel="manifest" href="manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="MyFinance">
+<link rel="apple-touch-icon" href="icon-192.png">
+<script>
+if("serviceWorker" in navigator){
+  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js"));
+}
+</script>
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- PIN SCREEN -->
+  <div id="pin-screen">
+    <div class="pin-logo">💰</div>
+    <div class="pin-appname">MyFinance</div>
+    <div class="pin-tagline">Personal Finance Manager</div>
+    <div class="pin-label" id="pin-label">Enter your 4-digit PIN</div>
+    <div class="pin-dots" id="pin-dots">
+      <div class="pin-dot" id="d0"></div>
+      <div class="pin-dot" id="d1"></div>
+      <div class="pin-dot" id="d2"></div>
+      <div class="pin-dot" id="d3"></div>
+    </div>
+    <div class="pin-error" id="pin-error"></div>
+    <div class="pin-keypad">
+      <div class="pin-key" onclick="pinKey('1')">1</div>
+      <div class="pin-key" onclick="pinKey('2')">2</div>
+      <div class="pin-key" onclick="pinKey('3')">3</div>
+      <div class="pin-key" onclick="pinKey('4')">4</div>
+      <div class="pin-key" onclick="pinKey('5')">5</div>
+      <div class="pin-key" onclick="pinKey('6')">6</div>
+      <div class="pin-key" onclick="pinKey('7')">7</div>
+      <div class="pin-key" onclick="pinKey('8')">8</div>
+      <div class="pin-key" onclick="pinKey('9')">9</div>
+      <div class="pin-key empty"></div>
+      <div class="pin-key" onclick="pinKey('0')">0</div>
+      <div class="pin-key del" onclick="pinDel()">⌫</div>
+    </div>
+    <div class="pin-setup-note" id="pin-setup-note"></div>
+    <div class="pin-change-link" id="pin-change-link" style="display:none" onclick="startChangePin()">🔐 Change PIN</div>
+  </div>
+
+  <!-- MAIN APP -->
+  <div id="main-app" style="display:none">
+    <div class="topbar">
+      <div class="topbar-title" id="screen-title">💰 MyFinance</div>
+      <button class="topbar-lock" onclick="lockApp()">🔒 Lock</button>
+    </div>
+    <div class="content" id="content"></div>
+    <nav class="nav">
+      <button class="nav-item active" onclick="goScreen('home')" id="nav-home"><span class="nav-icon">🏠</span>Home</button>
+      <button class="nav-item" onclick="goScreen('bank')" id="nav-bank"><span class="nav-icon">🏦</span>Bank</button>
+      <button class="nav-item" onclick="goScreen('loan')" id="nav-loan"><span class="nav-icon">📋</span>Loan</button>
+      <button class="nav-item" onclick="goScreen('transfer')" id="nav-transfer"><span class="nav-icon">💸</span>Transfer</button>
+      <button class="nav-item" onclick="goScreen('expense')" id="nav-expense"><span class="nav-icon">🛍️</span>Expense</button>
+      <button class="nav-item" onclick="goScreen('balance')" id="nav-balance"><span class="nav-icon">📊</span>Balance</button>
+    </nav>
+  </div>
+
+  <div id="modal-container"></div>
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+// ===== PIN SYSTEM =====
+let pinBuffer = '';
+let pinMode = 'login'; // 'login' | 'setup' | 'setup-confirm' | 'change-old' | 'change-new' | 'change-confirm'
+let pinFirstEntry = '';
+
+function getStoredPin() { return localStorage.getItem('mf_pin'); }
+function setStoredPin(p) { localStorage.setItem('mf_pin', p); }
+
+function initPinScreen() {
+  const stored = getStoredPin();
+  if (!stored) {
+    pinMode = 'setup';
+    document.getElementById('pin-label').textContent = 'Set a new 4-digit PIN';
+    document.getElementById('pin-setup-note').textContent = 'You will need this PIN every time you open the app. Please remember it.';
+  } else {
+    pinMode = 'login';
+    document.getElementById('pin-label').textContent = 'Enter your 4-digit PIN';
+    document.getElementById('pin-change-link').style.display = 'block';
+    document.getElementById('pin-setup-note').textContent = '';
+  }
+  pinBuffer = '';
+  updateDots();
+}
+
+function pinKey(d) {
+  if (pinBuffer.length >= 4) return;
+  pinBuffer += d;
+  updateDots();
+  if (pinBuffer.length === 4) {
+    setTimeout(processPin, 120);
+  }
+}
+
+function pinDel() {
+  if (pinBuffer.length > 0) {
+    pinBuffer = pinBuffer.slice(0, -1);
+    updateDots();
+    clearPinError();
+  }
+}
+
+function updateDots() {
+  for (let i = 0; i < 4; i++) {
+    const dot = document.getElementById('d' + i);
+    dot.classList.remove('filled', 'error');
+    if (i < pinBuffer.length) dot.classList.add('filled');
+  }
+}
+
+function setDotsError() {
+  for (let i = 0; i < 4; i++) {
+    document.getElementById('d' + i).classList.add('error');
+    document.getElementById('d' + i).classList.remove('filled');
+  }
+  setTimeout(() => { pinBuffer = ''; updateDots(); clearPinError(); }, 900);
+}
+
+function showPinError(msg) {
+  document.getElementById('pin-error').textContent = msg;
+}
+function clearPinError() {
+  document.getElementById('pin-error').textContent = '';
+}
+
+function processPin() {
+  const entered = pinBuffer;
+  pinBuffer = '';
+  updateDots();
+
+  if (pinMode === 'login') {
+    if (entered === getStoredPin()) {
+      unlockApp();
+    } else {
+      showPinError('Incorrect PIN. Try again.');
+      setDotsError();
+    }
+  } else if (pinMode === 'setup') {
+    pinFirstEntry = entered;
+    pinMode = 'setup-confirm';
+    document.getElementById('pin-label').textContent = 'Confirm your PIN';
+    document.getElementById('pin-setup-note').textContent = 'Enter the same PIN again to confirm.';
+  } else if (pinMode === 'setup-confirm') {
+    if (entered === pinFirstEntry) {
+      setStoredPin(entered);
+      unlockApp();
+    } else {
+      pinMode = 'setup';
+      pinFirstEntry = '';
+      document.getElementById('pin-label').textContent = 'PINs did not match. Set a new PIN';
+      showPinError('PINs did not match. Try again.');
+      setDotsError();
+    }
+  } else if (pinMode === 'change-old') {
+    if (entered === getStoredPin()) {
+      pinMode = 'change-new';
+      document.getElementById('pin-label').textContent = 'Enter new 4-digit PIN';
+      clearPinError();
+    } else {
+      showPinError('Incorrect current PIN.');
+      setDotsError();
+    }
+  } else if (pinMode === 'change-new') {
+    pinFirstEntry = entered;
+    pinMode = 'change-confirm';
+    document.getElementById('pin-label').textContent = 'Confirm new PIN';
+  } else if (pinMode === 'change-confirm') {
+    if (entered === pinFirstEntry) {
+      setStoredPin(entered);
+      pinMode = 'login';
+      document.getElementById('pin-label').textContent = 'PIN changed! Enter your new PIN';
+      clearPinError();
+    } else {
+      pinMode = 'change-new';
+      pinFirstEntry = '';
+      document.getElementById('pin-label').textContent = 'PINs did not match. Enter new PIN again';
+      showPinError('PINs did not match.');
+      setDotsError();
+    }
+  }
+}
+
+function unlockApp() {
+  document.getElementById('pin-screen').style.display = 'none';
+  document.getElementById('main-app').style.display = 'block';
+  renderHome();
+}
+
+function lockApp() {
+  document.getElementById('main-app').style.display = 'none';
+  document.getElementById('pin-screen').style.display = 'flex';
+  pinBuffer = '';
+  pinMode = 'login';
+  document.getElementById('pin-label').textContent = 'Enter your 4-digit PIN';
+  document.getElementById('pin-change-link').style.display = 'block';
+  document.getElementById('pin-setup-note').textContent = '';
+  clearPinError();
+  updateDots();
+}
+
+function startChangePin() {
+  pinMode = 'change-old';
+  pinBuffer = '';
+  document.getElementById('pin-label').textContent = 'Enter your CURRENT PIN';
+  document.getElementById('pin-change-link').style.display = 'none';
+  document.getElementById('pin-setup-note').textContent = '';
+  clearPinError();
+  updateDots();
+}
+
+// ===== DATA STORE =====
+let DB = { banks: [], loans: [], transactions: [], cashBalance: 0 };
+
+function loadDB() {
+  const raw = localStorage.getItem('myfinance_db_inr');
+  if (raw) { try { DB = JSON.parse(raw); } catch(e) {} }
+}
+function saveDB() { localStorage.setItem('myfinance_db_inr', JSON.stringify(DB)); }
+loadDB();
+
+function showToast(msg, duration=2200) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), duration);
+}
+
+function today() { return new Date().toISOString().split('T')[0]; }
+
+function fmtDate(d) {
+  if (!d) return '';
+  const [y,m,day] = d.split('-');
+  return `${day}/${m}/${y}`;
+}
+
+function fmtAmt(n) {
+  const formatted = Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return '₹' + formatted;
+}
+
+function uuid() { return Math.random().toString(36).slice(2) + Date.now().toString(36); }
+
+// ===== BALANCE CALCULATORS =====
+function getBankBalance(bankId) {
+  const bank = DB.banks.find(b => b.id === bankId);
+  if (!bank) return 0;
+  let bal = Number(bank.balance);
+  for (const tx of DB.transactions) {
+    if (tx.fromBankId === bankId) bal -= Number(tx.amount);
+    if (tx.toBankId === bankId) bal += Number(tx.amount);
+  }
+  return bal;
+}
+
+function getLoanBalance(loanId) {
+  const loan = DB.loans.find(l => l.id === loanId);
+  if (!loan) return 0;
+  let bal = Number(loan.balance);
+  for (const tx of DB.transactions) {
+    if (tx.type === 'bank-to-loan' && tx.toLoanId === loanId) bal -= Number(tx.amount);
+  }
+  return bal;
+}
+
+function getCashBalance() {
+  let bal = Number(DB.cashBalance);
+  for (const tx of DB.transactions) {
+    if (tx.type === 'withdrawal') bal += Number(tx.amount);
+    if (tx.type === 'expense' && tx.fromType === 'cash') bal -= Number(tx.amount);
+  }
+  return bal;
+}
+
+// ===== NAVIGATION =====
+let currentScreen = 'home';
+function goScreen(s) {
+  currentScreen = s;
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const nb = document.getElementById('nav-' + s);
+  if (nb) nb.classList.add('active');
+  const titles = { home:'💰 MyFinance', bank:'🏦 Bank Accounts', loan:'📋 Loan Accounts', transfer:'💸 Money Transfer', expense:'🛍️ Daily Expenses', balance:'📊 Account Balance' };
+  document.getElementById('screen-title').textContent = titles[s] || 'MyFinance';
+  const renders = { home:renderHome, bank:renderBank, loan:renderLoan, transfer:renderTransfer, expense:renderExpense, balance:renderBalance };
+  if (renders[s]) renders[s]();
+}
+
+// ===== MODAL =====
+function openModal(title, html) {
+  const mc = document.getElementById('modal-container');
+  mc.innerHTML = `<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal"><button class="modal-close" onclick="closeModal()">✕</button><div class="modal-title">${title}</div><div id="modal-body">${html}</div></div></div>`;
+}
+function closeModal() { document.getElementById('modal-container').innerHTML = ''; }
+
+// ===== HOME =====
+function renderHome() {
+  const totalBank = DB.banks.reduce((s, b) => s + getBankBalance(b.id), 0);
+  const totalLoan = DB.loans.reduce((s, l) => s + getLoanBalance(l.id), 0);
+  const cash = getCashBalance();
+  const recentTx = [...DB.transactions].sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+
+  let recentHtml = '';
+  if (recentTx.length === 0) {
+    recentHtml = '<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">No transactions yet</div></div>';
+  } else {
+    recentTx.forEach(tx => {
+      const icons = { expense:'🛍️', 'bank-to-loan':'🔄', 'bank-to-bank':'↔️', external:'📤', withdrawal:'💵' };
+      recentHtml += `<div class="list-item"><span style="font-size:22px">${icons[tx.type]||'💳'}</span><div class="list-item-info"><div class="list-item-name">${tx.remarks||tx.type}</div><div class="list-item-sub">${fmtDate(tx.date)}</div></div><div class="list-item-amount amount-neg">${fmtAmt(tx.amount)}</div></div>`;
+    });
+  }
+
+  document.getElementById('content').innerHTML = `
+    <div style="font-size:26px;font-weight:700;margin-bottom:6px">Hello 👋</div>
+    <div style="font-size:16px;color:var(--text3);margin-bottom:18px">Your financial overview today</div>
+    <div class="bal-card">
+      <div class="bal-label">Total Net Worth</div>
+      <div class="bal-amount">${fmtAmt(totalBank + cash - totalLoan)}</div>
+    </div>
+    <div class="bal-grid">
+      <div class="bal-mini"><div class="bal-mini-label">🏦 Bank Total</div><div class="bal-mini-val amount-pos">${fmtAmt(totalBank)}</div></div>
+      <div class="bal-mini"><div class="bal-mini-label">💵 Cash in Hand</div><div class="bal-mini-val amount-pos">${fmtAmt(cash)}</div></div>
+      <div class="bal-mini"><div class="bal-mini-label">📋 Loan Outstanding</div><div class="bal-mini-val amount-neg">${fmtAmt(totalLoan)}</div></div>
+      <div class="bal-mini"><div class="bal-mini-label">🏦 Accounts</div><div class="bal-mini-val">${DB.banks.length} Bank, ${DB.loans.length} Loan</div></div>
+    </div>
+    <div class="quick-actions">
+      <div class="qa-btn" onclick="goScreen('bank')"><span class="qa-icon">🏦</span><span class="qa-label">Add Bank</span></div>
+      <div class="qa-btn" onclick="goScreen('transfer')"><span class="qa-icon">💸</span><span class="qa-label">Transfer</span></div>
+      <div class="qa-btn" onclick="goScreen('expense')"><span class="qa-icon">🛍️</span><span class="qa-label">Expense</span></div>
+      <div class="qa-btn" onclick="goScreen('balance')"><span class="qa-icon">📊</span><span class="qa-label">Balance</span></div>
+      <div class="qa-btn" onclick="goScreen('loan')"><span class="qa-icon">📋</span><span class="qa-label">Add Loan</span></div>
+      <div class="qa-btn" onclick="exportCSVHome()"><span class="qa-icon">📥</span><span class="qa-label">Export CSV</span></div>
+    </div>
+    <div class="sec-title">Recent Transactions</div>
+    <div class="card">${recentHtml}</div>`;
+}
+
+// ===== BANK =====
+function renderBank() {
+  let listHtml = '';
+  if (DB.banks.length === 0) {
+    listHtml = '<div class="empty"><div class="empty-icon">🏦</div><div class="empty-text">No bank accounts added yet</div></div>';
+  } else {
+    DB.banks.forEach(b => {
+      const bal = getBankBalance(b.id);
+      listHtml += `<div class="list-item"><span style="font-size:24px">🏦</span><div class="list-item-info"><div class="list-item-name">${b.name}</div><div class="list-item-sub">Opening: ${fmtAmt(b.balance)}</div></div><div><div class="list-item-amount ${bal>=0?'amount-pos':'amount-neg'}">${fmtAmt(bal)}</div><div class="list-item-actions" style="margin-top:6px"><button class="btn btn-outline btn-sm" onclick="editBank('${b.id}')">✏️</button><button class="btn btn-danger btn-sm" onclick="deleteBank('${b.id}')">🗑️</button></div></div></div>`;
+    });
+  }
+  document.getElementById('content').innerHTML = `
+    <div class="card"><div class="card-header"><span class="card-title">Bank Accounts</span><button class="btn btn-primary btn-sm" onclick="addBankModal()">+ Add New</button></div><div>${listHtml}</div></div>
+    <div style="font-size:12px;color:var(--text3);text-align:center;margin-top:8px">✏️ Edit balance &nbsp;|&nbsp; 🗑️ Delete account</div>`;
+}
+
+function addBankModal(prefill) {
+  openModal(prefill ? 'Edit Bank Account' : 'Add Bank Account', `
+    <div class="form-group"><label class="form-label">Bank Account Name</label><input class="form-input" id="b-name" placeholder="e.g. SBI Savings, HDFC Current" value="${prefill?prefill.name:''}"></div>
+    <div class="form-group"><label class="form-label">Opening / Existing Balance (₹)</label><input class="form-input" id="b-bal" type="number" placeholder="0.00" value="${prefill?prefill.balance:''}"></div>
+    <div class="btn-row"><button class="btn btn-primary" onclick="saveBank('${prefill?prefill.id:''}')">💾 Save</button><button class="btn btn-outline" onclick="closeModal()">Cancel</button></div>`);
+}
+
+function saveBank(id) {
+  const name = document.getElementById('b-name').value.trim();
+  const bal = parseFloat(document.getElementById('b-bal').value) || 0;
+  if (!name) { showToast('⚠️ Enter account name'); return; }
+  if (id) { const b = DB.banks.find(x=>x.id===id); if(b){b.name=name;b.balance=bal;} }
+  else DB.banks.push({id:uuid(),name,balance:bal});
+  saveDB(); closeModal(); showToast(id?'✅ Account updated!':'✅ Bank account added!'); renderBank();
+}
+function editBank(id) { const b = DB.banks.find(x=>x.id===id); if(b) addBankModal(b); }
+function deleteBank(id) {
+  if (!confirm('Delete this bank account?')) return;
+  DB.banks = DB.banks.filter(x=>x.id!==id);
+  saveDB(); showToast('🗑️ Account deleted'); renderBank();
+}
+
+// ===== LOAN =====
+function renderLoan() {
+  let listHtml = '';
+  if (DB.loans.length === 0) {
+    listHtml = '<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">No loan accounts added yet</div></div>';
+  } else {
+    DB.loans.forEach(l => {
+      const bal = getLoanBalance(l.id);
+      listHtml += `<div class="list-item"><span style="font-size:24px">📋</span><div class="list-item-info"><div class="list-item-name">${l.name}</div><div class="list-item-sub">Original: ${fmtAmt(l.balance)}</div></div><div><div class="list-item-amount amount-neg">${fmtAmt(bal)}</div><div class="list-item-actions" style="margin-top:6px"><button class="btn btn-outline btn-sm" onclick="editLoan('${l.id}')">✏️</button><button class="btn btn-danger btn-sm" onclick="deleteLoan('${l.id}')">🗑️</button></div></div></div>`;
+    });
+  }
+  document.getElementById('content').innerHTML = `
+    <div class="card"><div class="card-header"><span class="card-title">Loan Accounts</span><button class="btn btn-primary btn-sm" onclick="addLoanModal()">+ Add New</button></div><div>${listHtml}</div></div>
+    <div style="font-size:12px;color:var(--text3);text-align:center;margin-top:8px">Outstanding balance reduces as you repay via Money Transfer</div>`;
+}
+
+function addLoanModal(prefill) {
+  openModal(prefill?'Edit Loan Account':'Add Loan Account', `
+    <div class="form-group"><label class="form-label">Loan Account Name</label><input class="form-input" id="l-name" placeholder="e.g. Home Loan SBI, Personal Loan HDFC" value="${prefill?prefill.name:''}"></div>
+    <div class="form-group"><label class="form-label">Loan Outstanding Balance (₹)</label><input class="form-input" id="l-bal" type="number" placeholder="0.00" value="${prefill?prefill.balance:''}"></div>
+    <div class="btn-row"><button class="btn btn-primary" onclick="saveLoan('${prefill?prefill.id:''}')">💾 Save</button><button class="btn btn-outline" onclick="closeModal()">Cancel</button></div>`);
+}
+
+function saveLoan(id) {
+  const name = document.getElementById('l-name').value.trim();
+  const bal = parseFloat(document.getElementById('l-bal').value) || 0;
+  if (!name) { showToast('⚠️ Enter loan account name'); return; }
+  if (id) { const l = DB.loans.find(x=>x.id===id); if(l){l.name=name;l.balance=bal;} }
+  else DB.loans.push({id:uuid(),name,balance:bal});
+  saveDB(); closeModal(); showToast(id?'✅ Loan updated!':'✅ Loan account added!'); renderLoan();
+}
+function editLoan(id) { const l = DB.loans.find(x=>x.id===id); if(l) addLoanModal(l); }
+function deleteLoan(id) {
+  if (!confirm('Delete this loan account?')) return;
+  DB.loans = DB.loans.filter(x=>x.id!==id);
+  saveDB(); showToast('🗑️ Loan deleted'); renderLoan();
+}
+
+// ===== TRANSFER =====
+let transferType = 'bank-to-loan';
+function renderTransfer() {
+  const bankOpts = DB.banks.map(b=>`<option value="${b.id}">${b.name} (${fmtAmt(getBankBalance(b.id))})</option>`).join('');
+  const loanOpts = DB.loans.map(l=>`<option value="${l.id}">${l.name} (${fmtAmt(getLoanBalance(l.id))})</option>`).join('');
+  const bank2Opts = DB.banks.map(b=>`<option value="${b.id}">${b.name}</option>`).join('');
+
+  document.getElementById('content').innerHTML = `
+    <div class="card card-body">
+      <div class="form-label" style="margin-bottom:8px">Select Transfer Type</div>
+      <div class="transfer-types">
+        <div class="tt-btn ${transferType==='bank-to-loan'?'selected':''}" onclick="setTT('bank-to-loan')"><span class="tt-icon">🔄</span>Bank → Loan Repay</div>
+        <div class="tt-btn ${transferType==='bank-to-bank'?'selected':''}" onclick="setTT('bank-to-bank')"><span class="tt-icon">↔️</span>Bank → Bank</div>
+        <div class="tt-btn ${transferType==='external'?'selected':''}" onclick="setTT('external')"><span class="tt-icon">📤</span>External Payment</div>
+        <div class="tt-btn ${transferType==='withdrawal'?'selected':''}" onclick="setTT('withdrawal')"><span class="tt-icon">💵</span>Cash Withdrawal</div>
+      </div>
+    </div>
+    <div class="card card-body">${renderTransferForm(bankOpts, loanOpts, bank2Opts)}</div>`;
+}
+
+function renderTransferForm(bankOpts, loanOpts, bank2Opts) {
+  const dateRow = `<div class="form-group"><label class="form-label">Date</label><input class="form-input" type="date" id="tx-date" value="${today()}"></div>`;
+  const amtRow = `<div class="form-group"><label class="form-label">Amount (₹)</label><input class="form-input" type="number" id="tx-amt" placeholder="0.00"></div>`;
+  const remarksRow = `<div class="form-group"><label class="form-label">Remarks</label><input class="form-input" id="tx-remarks" placeholder="Optional note"></div>`;
+  const saveBtn = `<button class="btn btn-success" onclick="doTransfer()" style="width:100%">✅ Save Transfer</button>`;
+  if (transferType==='bank-to-loan') return `${dateRow}<div class="form-group"><label class="form-label">From Bank Account</label><select class="form-input" id="tx-from">${bankOpts||'<option>No banks added</option>'}</select></div><div class="form-group"><label class="form-label">To Loan Account (Repayment)</label><select class="form-input" id="tx-to-loan">${loanOpts||'<option>No loans added</option>'}</select></div>${amtRow}${remarksRow}${saveBtn}`;
+  if (transferType==='bank-to-bank') return `${dateRow}<div class="form-group"><label class="form-label">From Bank Account</label><select class="form-input" id="tx-from">${bankOpts||'<option>No banks</option>'}</select></div><div class="form-group"><label class="form-label">To Bank Account</label><select class="form-input" id="tx-to-bank">${bank2Opts||'<option>No banks</option>'}</select></div>${amtRow}${remarksRow}${saveBtn}`;
+  if (transferType==='external') return `${dateRow}<div class="form-group"><label class="form-label">From Bank Account</label><select class="form-input" id="tx-from">${bankOpts||'<option>No banks</option>'}</select></div><div class="form-group"><label class="form-label">Payee / Description</label><input class="form-input" id="tx-payee" placeholder="e.g. Rent, Electricity, Insurance"></div>${amtRow}${remarksRow}${saveBtn}`;
+  if (transferType==='withdrawal') return `${dateRow}<div class="form-group"><label class="form-label">From Bank Account</label><select class="form-input" id="tx-from">${bankOpts||'<option>No banks</option>'}</select></div>${amtRow}${remarksRow}${saveBtn}`;
+  return '';
+}
+
+function setTT(t) { transferType = t; renderTransfer(); }
+
+function doTransfer() {
+  const date = document.getElementById('tx-date').value;
+  const amt = parseFloat(document.getElementById('tx-amt').value);
+  const remarks = document.getElementById('tx-remarks')?.value || '';
+  if (!amt || amt <= 0) { showToast('⚠️ Enter a valid amount'); return; }
+  if (!date) { showToast('⚠️ Select a date'); return; }
+  const tx = {id:uuid(), date, amount:amt, type:transferType, remarks};
+  if (transferType==='bank-to-loan') {
+    const from = document.getElementById('tx-from').value;
+    const toLoan = document.getElementById('tx-to-loan').value;
+    if (!from||!toLoan) { showToast('⚠️ Select accounts'); return; }
+    if (getBankBalance(from)<amt) { showToast('⚠️ Insufficient bank balance'); return; }
+    tx.fromBankId=from; tx.toLoanId=toLoan;
+  } else if (transferType==='bank-to-bank') {
+    const from = document.getElementById('tx-from').value;
+    const toBank = document.getElementById('tx-to-bank').value;
+    if (from===toBank) { showToast('⚠️ Cannot transfer to same account'); return; }
+    if (getBankBalance(from)<amt) { showToast('⚠️ Insufficient balance'); return; }
+    tx.fromBankId=from; tx.toBankId=toBank;
+  } else if (transferType==='external') {
+    const from = document.getElementById('tx-from').value;
+    const payee = document.getElementById('tx-payee').value.trim();
+    if (getBankBalance(from)<amt) { showToast('⚠️ Insufficient balance'); return; }
+    tx.fromBankId=from; tx.payee=payee; tx.remarks=payee+(remarks?' - '+remarks:'');
+  } else if (transferType==='withdrawal') {
+    const from = document.getElementById('tx-from').value;
+    if (getBankBalance(from)<amt) { showToast('⚠️ Insufficient balance'); return; }
+    tx.fromBankId=from;
+  }
+  DB.transactions.push(tx); saveDB(); showToast('✅ Transfer saved!'); renderTransfer();
+}
+
+// ===== EXPENSE =====
+function renderExpense() {
+  const recentExp = DB.transactions.filter(t=>t.type==='expense').sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,10);
+  let expHtml = '';
+  recentExp.forEach(tx => {
+    const src = tx.fromType==='cash'?'Cash':(DB.banks.find(b=>b.id===tx.fromBankId)?.name||'Bank');
+    expHtml += `<div class="list-item"><span style="font-size:22px">🛍️</span><div class="list-item-info"><div class="list-item-name">${tx.remarks||'Expense'}</div><div class="list-item-sub">${fmtDate(tx.date)} · ${src}</div></div><div><div class="list-item-amount amount-neg">${fmtAmt(tx.amount)}</div><button class="btn btn-danger btn-sm" onclick="deleteExpense('${tx.id}')" style="margin-top:4px">🗑️</button></div></div>`;
+  });
+  document.getElementById('content').innerHTML = `
+    <div class="card card-body">
+      <div class="form-group"><label class="form-label">Date of Expense</label><input class="form-input" type="date" id="exp-date" value="${today()}"></div>
+      <div class="form-group"><label class="form-label">Pay From</label>
+        <select class="form-input" id="exp-from-type">
+          <option value="cash">💵 Cash in Hand (${fmtAmt(getCashBalance())})</option>
+          ${DB.banks.map(b=>`<option value="bank-${b.id}">🏦 ${b.name} (${fmtAmt(getBankBalance(b.id))})</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Amount (₹)</label><input class="form-input" type="number" id="exp-amt" placeholder="0.00"></div>
+      <div class="form-group"><label class="form-label">Remarks / Description</label><input class="form-input" id="exp-remarks" placeholder="e.g. Groceries, Auto, Lunch, Medicine"></div>
+      <button class="btn btn-primary" onclick="saveExpense()" style="width:100%">💾 Save Expense</button>
+    </div>
+    <div class="sec-title">Recent Expenses</div>
+    <div class="card">${expHtml||'<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">No expenses recorded yet</div></div>'}</div>`;
+}
+
+function saveExpense() {
+  const date = document.getElementById('exp-date').value;
+  const fromVal = document.getElementById('exp-from-type').value;
+  const amt = parseFloat(document.getElementById('exp-amt').value);
+  const remarks = document.getElementById('exp-remarks').value.trim();
+  if (!amt||amt<=0) { showToast('⚠️ Enter a valid amount'); return; }
+  if (!remarks) { showToast('⚠️ Add a description'); return; }
+  const tx = {id:uuid(), date, amount:amt, type:'expense', remarks};
+  if (fromVal==='cash') {
+    tx.fromType='cash';
+    if (getCashBalance()<amt) { showToast('⚠️ Insufficient cash balance'); return; }
+  } else if (fromVal.startsWith('bank-')) {
+    const bankId = fromVal.replace('bank-','');
+    if (getBankBalance(bankId)<amt) { showToast('⚠️ Insufficient bank balance'); return; }
+    tx.fromType='bank'; tx.fromBankId=bankId;
+  }
+  DB.transactions.push(tx); saveDB(); showToast('✅ Expense saved!'); renderExpense();
+}
+
+function deleteExpense(id) {
+  DB.transactions = DB.transactions.filter(t=>t.id!==id);
+  saveDB(); showToast('🗑️ Deleted'); renderExpense();
+}
+
+// ===== BALANCE =====
+function renderBalance() {
+  const bankOpts = DB.banks.map(b=>`<option value="${b.id}">${b.name}</option>`).join('');
+  const loanOpts = DB.loans.map(l=>`<option value="${l.id}">${l.name}</option>`).join('');
+  const totalBank = DB.banks.reduce((s,b)=>s+getBankBalance(b.id),0);
+  const totalLoan = DB.loans.reduce((s,l)=>s+getLoanBalance(l.id),0);
+  const cash = getCashBalance();
+  const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+
+  document.getElementById('content').innerHTML = `
+    <div class="bal-grid">
+      <div class="bal-mini"><div class="bal-mini-label">💵 Cash Balance</div><div class="bal-mini-val amount-pos">${fmtAmt(cash)}</div></div>
+      <div class="bal-mini"><div class="bal-mini-label">🏦 Total Bank</div><div class="bal-mini-val amount-pos">${fmtAmt(totalBank)}</div></div>
+      <div class="bal-mini"><div class="bal-mini-label">📋 Total Loan</div><div class="bal-mini-val amount-neg">${fmtAmt(totalLoan)}</div></div>
+      <div class="bal-mini"><div class="bal-mini-label">📈 Net Balance</div><div class="bal-mini-val ${(totalBank+cash-totalLoan)>=0?'amount-pos':'amount-neg'}">${fmtAmt(totalBank+cash-totalLoan)}</div></div>
+    </div>
+
+    ${DB.banks.length?`<div class="card card-body"><div class="form-label">🏦 Check Bank Balance</div><div style="display:flex;gap:8px;align-items:center;margin-top:8px"><select class="form-input" id="sel-bank" style="flex:1">${bankOpts}</select><button class="btn btn-primary btn-sm" onclick="showBankBal()">Check</button></div><div id="bank-bal-result" style="margin-top:10px;font-weight:700;font-size:16px"></div></div>`:''}
+
+    ${DB.loans.length?`<div class="card card-body"><div class="form-label">📋 Check Loan Balance</div><div style="display:flex;gap:8px;align-items:center;margin-top:8px"><select class="form-input" id="sel-loan" style="flex:1">${loanOpts}</select><button class="btn btn-primary btn-sm" onclick="showLoanBal()">Check</button></div><div id="loan-bal-result" style="margin-top:10px;font-weight:700;font-size:16px"></div></div>`:''}
+
+    <div class="card card-body">
+      <div class="form-label" style="margin-bottom:12px">📥 Export Report (CSV)</div>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <div style="flex:1"><label class="form-label">From</label><input class="form-input" type="date" id="exp-from" value="${firstOfMonth}"></div>
+        <div style="flex:1"><label class="form-label">To</label><input class="form-input" type="date" id="exp-to" value="${today()}"></div>
+      </div>
+      <button class="btn btn-success" onclick="exportCSV()" style="width:100%">📥 Export CSV</button>
+    </div>
+
+    <div class="card card-body">
+      <div class="form-label" style="margin-bottom:12px">🔄 Backup & Restore</div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="doBackup()">📤 Backup Data</button>
+        <button class="btn btn-outline" onclick="document.getElementById('restore-file').click()">📥 Restore</button>
+        <input type="file" id="restore-file" accept=".json" style="display:none" onchange="doRestore(event)">
+      </div>
+    </div>
+
+    <div class="card card-body">
+      <div class="form-label" style="margin-bottom:8px">💵 Set Initial Cash Balance (₹)</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input class="form-input" type="number" id="cash-init" placeholder="${DB.cashBalance}" style="flex:1">
+        <button class="btn btn-primary btn-sm" onclick="saveCash()">Save</button>
+      </div>
+    </div>
+
+    <div class="card card-body">
+      <div class="form-label" style="margin-bottom:12px">🔐 Change PIN</div>
+      <button class="btn btn-outline" onclick="lockAndChangePIN()" style="width:100%">🔒 Lock & Change PIN</button>
+    </div>`;
+}
+
+function lockAndChangePIN() {
+  document.getElementById('main-app').style.display = 'none';
+  document.getElementById('pin-screen').style.display = 'flex';
+  startChangePin();
+}
+
+function showBankBal() {
+  const id = document.getElementById('sel-bank').value;
+  const b = DB.banks.find(x=>x.id===id);
+  const bal = getBankBalance(id);
+  document.getElementById('bank-bal-result').innerHTML = `${b?.name}: <span class="${bal>=0?'amount-pos':'amount-neg'}">${fmtAmt(bal)}</span>`;
+}
+
+function showLoanBal() {
+  const id = document.getElementById('sel-loan').value;
+  const l = DB.loans.find(x=>x.id===id);
+  const bal = getLoanBalance(id);
+  document.getElementById('loan-bal-result').innerHTML = `${l?.name} Outstanding: <span class="amount-neg">${fmtAmt(bal)}</span>`;
+}
+
+function saveCash() {
+  const v = parseFloat(document.getElementById('cash-init').value);
+  if (isNaN(v)) { showToast('⚠️ Enter valid amount'); return; }
+  DB.cashBalance = v; saveDB(); showToast('✅ Cash balance updated!'); renderBalance();
+}
+
+function exportCSVHome() {
+  const fromDate = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+  doExportCSV(fromDate, today());
+}
+
+function exportCSV() {
+  const fromDate = document.getElementById('exp-from').value;
+  const toDate = document.getElementById('exp-to').value;
+  doExportCSV(fromDate, toDate);
+}
+
+function doExportCSV(fromDate, toDate) {
+  const filtered = DB.transactions.filter(t=>t.date>=fromDate&&t.date<=toDate).sort((a,b)=>new Date(a.date)-new Date(b.date));
+  let csv = 'Date,Type,From,To,Amount (INR),Remarks\n';
+  filtered.forEach(tx => {
+    const fromName = tx.fromType==='cash'?'Cash':(DB.banks.find(b=>b.id===tx.fromBankId)?.name||'');
+    const toName = tx.toBankId?(DB.banks.find(b=>b.id===tx.toBankId)?.name||''):tx.toLoanId?(DB.loans.find(l=>l.id===tx.toLoanId)?.name||''):tx.payee||'';
+    csv += `${tx.date},${tx.type},"${fromName}","${toName}",${tx.amount},"${tx.remarks||''}"\n`;
+  });
+  const blob = new Blob([csv],{type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download=`MyFinance_${fromDate}_to_${toDate}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+  showToast('✅ CSV exported!');
+}
+
+function doBackup() {
+  const blob = new Blob([JSON.stringify(DB,null,2)],{type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download=`MyFinance_Backup_${today()}.json`;
+  a.click(); URL.revokeObjectURL(url);
+  showToast('✅ Backup downloaded!');
+}
+
+function doRestore(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (data.banks!==undefined&&data.loans!==undefined) {
+        DB=data; saveDB(); showToast('✅ Data restored!'); goScreen('home');
+      } else showToast('⚠️ Invalid backup file');
+    } catch { showToast('⚠️ Error reading file'); }
+  };
+  reader.readAsText(file);
+}
+
+// ===== INIT =====
+initPinScreen();
+</script>
+</body>
+</html>
